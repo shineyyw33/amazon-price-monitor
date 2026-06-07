@@ -4,7 +4,7 @@ import gspread
 
 from bs4 import BeautifulSoup
 from oauth2client.service_account import ServiceAccountCredentials
-from datetime import datetime
+from datetime import datetime, timedelta
 scope = [
     "https://spreadsheets.google.com/feeds",
     "https://www.googleapis.com/auth/drive"
@@ -94,22 +94,37 @@ def get_product_info(asin, marketplace):
             + fraction.get_text(strip=True)
         )
 
-    # Coupon
+# =====================
 
-    coupon = "No Coupon"
+# Coupon（稳定版）
+
+# =====================
+
+coupon = "No Coupon"
+
+coupon_element = soup.select_one(
+
+    "[data-csa-c-type='coupon'], #couponBadge, .couponBadge, .promoPriceBlockMessage"
+
+)
+
+if coupon_element:
+
+    coupon_text = coupon_element.get_text(" ", strip=True)
+
+    coupon = coupon_text
+
+    if coupon == "No Coupon":
+        import re
 
     coupon_match = re.search(
-        r'Apply\s+(AED|SAR|USD|EUR|GBP)\s*([\d,\.]+)\s+coupon',
-        page_text,
+        r'(AED|SAR|USD|EUR|GBP)\s*[\d,\.]+\s*coupon',
+        soup.get_text(" ", strip=True),
         re.IGNORECASE
     )
 
     if coupon_match:
-
-        coupon = (
-            f"{coupon_match.group(1)} "
-            f"{coupon_match.group(2)} coupon"
-        )
+        coupon = coupon_match.group(0)
 
     # Rating
 
@@ -177,9 +192,7 @@ def get_product_info(asin, marketplace):
     return {
 
         "date":
-        datetime.now().strftime(
-            "%Y-%m-%d %H:%M:%S"
-        ),
+        (datetime.utcnow() + timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S"),
 
         "marketplace":
         marketplace.upper(),
